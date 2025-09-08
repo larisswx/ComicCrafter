@@ -26,6 +26,7 @@ const SfxText: React.FC<{ text: string }> = ({ text }) => (
         <h2 className="text-6xl md:text-8xl font-black text-amber-400 transform -rotate-12"
             style={{
                 fontFamily: "'Bangers', cursive",
+                // FIX: Corrected CSS property from 'webkitTextStroke' to 'WebkitTextStroke' for React style objects.
                 WebkitTextStroke: '4px #c2410c',
                 paintOrder: 'stroke fill'
             }}
