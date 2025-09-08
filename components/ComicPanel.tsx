@@ -16,7 +16,7 @@ const DialogueBubble: React.FC<{ text: string }> = ({ text }) => (
 );
 
 const NarrationBox: React.FC<{ text:string }> = ({ text }) => (
-    <div className="bg-slate-800/80 text-white p-2 text-center italic border-2 border-slate-600 rounded-md shadow-lg" style={{ fontFamily: "'Inter', sans-serif"}}>
+    <div className="bg-slate-200/80 text-black border-slate-400 dark:bg-slate-800/80 dark:text-white dark:border-slate-600 p-2 text-center italic border-2 rounded-md shadow-lg" style={{ fontFamily: "'Inter', sans-serif"}}>
         {text}
     </div>
 );
@@ -41,13 +41,11 @@ const ComicPanel: React.FC<ComicPanelProps> = ({ panel, onRemove }) => {
   const sfxItems = panel.textItems.filter(item => item.type === 'sfx');
 
   return (
-    <div className="relative w-full h-full bg-slate-800 rounded-md overflow-hidden shadow-2xl group"
-      style={{ boxShadow: 'inset 0 0 0 4px white' }}
-    >
+    <div className="relative w-full h-full bg-slate-200 dark:bg-slate-800 rounded-md overflow-hidden shadow-2xl group border-4 border-black dark:border-white">
       {panel.isLoading ? (
-        <div className="w-full h-full flex flex-col items-center justify-center bg-slate-800/50">
+        <div className="w-full h-full flex flex-col items-center justify-center bg-slate-200/50 dark:bg-slate-800/50">
             <Loader />
-            <p className="mt-4 text-slate-400 text-center text-sm px-2">Generating panel... <br/> This can take a moment.</p>
+            <p className="mt-4 text-slate-500 dark:text-slate-400 text-center text-sm px-2">Generating panel... <br/> This can take a moment.</p>
         </div>
       ) : (
         <>

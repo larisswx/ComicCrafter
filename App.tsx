@@ -8,6 +8,10 @@ import PanelCreator from './components/PanelCreator';
 import ComicPage from './components/ComicPage';
 import ProjectManager from './components/ProjectManager';
 import { toPng } from 'html-to-image';
+import ExportManager from './components/ExportManager';
+import { exportProjectToPdf, exportProjectToCbz } from './services/exportService';
+
+type Theme = 'light' | 'dark';
 
 const PageControls: React.FC<{
   currentPageIndex: number;
@@ -16,16 +20,16 @@ const PageControls: React.FC<{
   onRemovePage: () => void;
   onPageChange: (newIndex: number) => void;
 }> = ({ currentPageIndex, totalPages, onAddPage, onRemovePage, onPageChange }) => (
-  <div className="flex items-center justify-center gap-2 mb-6 p-2 bg-slate-800/50 backdrop-blur-sm rounded-xl border border-slate-700">
-    <button onClick={() => onPageChange(currentPageIndex - 1)} disabled={currentPageIndex === 0} className="px-3 py-2 bg-slate-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-600 transition-colors">
+  <div className="flex items-center justify-center gap-2 mb-6 p-2 bg-slate-100 dark:bg-slate-800/50 backdrop-blur-sm rounded-xl border border-slate-300 dark:border-slate-700">
+    <button onClick={() => onPageChange(currentPageIndex - 1)} disabled={currentPageIndex === 0} className="px-3 py-2 bg-slate-200 dark:bg-slate-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">
       &larr;
     </button>
-    <span className="font-bold text-slate-300">Page {currentPageIndex + 1} / {totalPages}</span>
-    <button onClick={() => onPageChange(currentPageIndex + 1)} disabled={currentPageIndex >= totalPages - 1} className="px-3 py-2 bg-slate-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-600 transition-colors">
+    <span className="font-bold text-slate-600 dark:text-slate-300">Page {currentPageIndex + 1} / {totalPages}</span>
+    <button onClick={() => onPageChange(currentPageIndex + 1)} disabled={currentPageIndex >= totalPages - 1} className="px-3 py-2 bg-slate-200 dark:bg-slate-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">
       &rarr;
     </button>
-    <div className="w-px h-6 bg-slate-600 mx-2"></div>
-    <button onClick={onAddPage} className="px-4 py-2 bg-indigo-600 rounded-lg hover:bg-indigo-500 transition-colors font-semibold text-sm">
+    <div className="w-px h-6 bg-slate-300 dark:bg-slate-600 mx-2"></div>
+    <button onClick={onAddPage} className="px-4 py-2 bg-indigo-600 rounded-lg hover:bg-indigo-500 transition-colors font-semibold text-sm text-white">
       Add Page
     </button>
     <button onClick={onRemovePage} disabled={totalPages <= 1} className="px-4 py-2 bg-red-800/50 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-red-800/80 transition-colors text-sm text-red-300">
@@ -40,6 +44,29 @@ export default function App(): React.JSX.Element {
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
   const [isCharacterLoading, setIsCharacterLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState<boolean>(false);
+  const [exportProgress, setExportProgress] = useState<string>('');
+  const [theme, setTheme] = useState<Theme>(() => {
+    if (typeof window !== 'undefined' && window.localStorage) {
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            return 'dark';
+        }
+    }
+    return 'light';
+  });
+
+  useEffect(() => {
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  const handleThemeToggle = () => {
+    setTheme(prevTheme => prevTheme === 'light' ? 'dark' : 'light');
+  };
   
   // Load projects from localStorage on initial render
   useEffect(() => {
@@ -193,7 +220,7 @@ export default function App(): React.JSX.Element {
     }
   };
   
-  const handleExport = useCallback(() => {
+  const handleExportPng = useCallback(() => {
     const node = document.getElementById('comic-page-export');
     if (!node) {
       setError("Could not find comic page element to export.");
@@ -202,12 +229,12 @@ export default function App(): React.JSX.Element {
 
     toPng(node, { 
         cacheBust: true, 
-        backgroundColor: '#0F172A', // slate-900
+        backgroundColor: theme === 'dark' ? '#0F172A' : '#FFFFFF',
         pixelRatio: 1.5 
       })
       .then((dataUrl) => {
         const link = document.createElement('a');
-        link.download = `comic-page-${currentPageIndex + 1}.png`;
+        link.download = `${currentProject?.name.replace(/ /g, '_')}_page_${currentPageIndex + 1}.png`;
         link.href = dataUrl;
         link.click();
       })
@@ -215,11 +242,41 @@ export default function App(): React.JSX.Element {
         console.error('oops, something went wrong!', err);
         setError("Failed to export the comic page.");
       });
-  }, [currentPageIndex]);
+  }, [currentPageIndex, currentProject, theme]);
+
+  const handleExportPdf = async () => {
+    if (!currentProject) return;
+    setIsExporting(true);
+    setError(null);
+    try {
+      await exportProjectToPdf(currentProject, setExportProgress, theme);
+    } catch (err) {
+      console.error(err);
+      setError(err instanceof Error ? err.message : 'An unknown error occurred during PDF export.');
+    } finally {
+      setIsExporting(false);
+      setExportProgress('');
+    }
+  };
+
+  const handleExportCbz = async () => {
+    if (!currentProject) return;
+    setIsExporting(true);
+    setError(null);
+    try {
+      await exportProjectToCbz(currentProject, setExportProgress, theme);
+    } catch (err) {
+      console.error(err);
+      setError(err instanceof Error ? err.message : 'An unknown error occurred during CBZ export.');
+    } finally {
+      setIsExporting(false);
+      setExportProgress('');
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-200">
-      <Header />
+    <div className="min-h-screen bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 transition-colors duration-300">
+      <Header onToggleTheme={handleThemeToggle} theme={theme} />
       <main className="container mx-auto p-4 lg:p-6">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           <aside className="lg:col-span-4 xl:col-span-3 space-y-6">
@@ -241,24 +298,22 @@ export default function App(): React.JSX.Element {
                   onAddPanel={handleAddPanel} 
                   isCharacterCreated={!!currentProject.character} 
                 />
-                 {currentPage && currentPage.panels.length > 0 && (
-                    <div className="p-6 bg-slate-800/50 border border-slate-700 rounded-2xl">
-                        <h2 className="text-xl font-bold text-teal-400 mb-4">Export Page</h2>
-                        <button
-                            onClick={handleExport}
-                            className="w-full bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-600 hover:to-cyan-700 text-white font-bold py-3 px-4 rounded-lg transition-all duration-300 flex items-center justify-center shadow-lg focus:outline-none focus:ring-4 focus:ring-teal-400/50"
-                        >
-                            Download Page {currentPageIndex + 1}
-                        </button>
-                    </div>
-                )}
+                <ExportManager
+                    project={currentProject}
+                    currentPageIndex={currentPageIndex}
+                    onExportPng={handleExportPng}
+                    onExportPdf={handleExportPdf}
+                    onExportCbz={handleExportCbz}
+                    isExporting={isExporting}
+                    exportProgress={exportProgress}
+                />
               </>
             )}
           </aside>
 
           <div className="lg:col-span-8 xl:col-span-9">
             {error && (
-              <div className="bg-red-900/50 border border-red-700 text-red-200 px-4 py-3 rounded-xl relative mb-6" role="alert">
+              <div className="bg-red-100 border border-red-300 text-red-800 dark:bg-red-900/50 dark:border-red-700 dark:text-red-200 px-4 py-3 rounded-xl relative mb-6" role="alert">
                 <strong className="font-bold">Error: </strong>
                 <span className="block sm:inline">{error}</span>
               </div>
@@ -275,10 +330,10 @@ export default function App(): React.JSX.Element {
                 <ComicPage panels={currentPage.panels} onRemovePanel={handleRemovePanel}/>
               </>
             ) : (
-                <div className="h-full min-h-[600px] flex items-center justify-center text-center bg-slate-800/50 border-2 border-dashed border-slate-700 rounded-2xl">
+                <div className="h-full min-h-[600px] flex items-center justify-center text-center bg-slate-100/50 dark:bg-slate-800/50 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-2xl">
                     <div>
-                        <h2 className="text-2xl font-bold text-teal-400">Welcome to ComicCrafter</h2>
-                        <p className="mt-2 text-slate-400">Please create a new project or select an existing one to begin.</p>
+                        <h2 className="text-2xl font-bold text-teal-600 dark:text-teal-400">Welcome to ComicCrafter</h2>
+                        <p className="mt-2 text-slate-500 dark:text-slate-400">Please create a new project or select an existing one to begin.</p>
                     </div>
                 </div>
             )}

@@ -5,20 +5,20 @@ import ComicPanel from './ComicPanel';
 interface ComicPageProps {
   panels: Panel[];
   onRemovePanel: (id: number) => void;
+  exportId?: string;
 }
 
-const ComicPage: React.FC<ComicPageProps> = ({ panels, onRemovePanel }) => {
+const ComicPage: React.FC<ComicPageProps> = ({ panels, onRemovePanel, exportId }) => {
   return (
     <div 
-      id="comic-page-export" 
-      className="p-4 bg-slate-900 min-h-[600px] rounded-lg shadow-[inset_0_2px_8px_rgba(0,0,0,0.6)]"
-      style={{ boxShadow: 'inset 0 0 0 4px #334155' }} // slate-700
+      id={exportId || 'comic-page-export'} 
+      className="p-4 bg-white dark:bg-slate-900 min-h-[600px] rounded-lg border-4 border-slate-300 dark:border-slate-700 shadow-inner"
     >
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 auto-rows-fr">
         {panels.length === 0 && (
-          <div className="col-span-1 md:col-span-2 h-full min-h-[500px] flex items-center justify-center text-center text-slate-500 border-2 border-dashed border-slate-700 rounded-md">
+          <div className="col-span-1 md:col-span-2 h-full min-h-[500px] flex items-center justify-center text-center text-slate-400 dark:text-slate-500 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-md">
             <div>
-              <h3 className="text-xl font-semibold text-slate-400">Your Comic Page Awaits</h3>
+              <h3 className="text-xl font-semibold text-slate-500 dark:text-slate-400">Your Comic Page Awaits</h3>
               <p>Create a character and add panels to begin your story.</p>
             </div>
           </div>
